@@ -51,15 +51,14 @@
       font-weight: bold;
       color: #1a5276;
       margin-top: 20px;
+      position: relative;
+      height: 40px;
     }
     .marquee span {
       display: inline-block;
-      padding-left: 100%;
-      animation: scroll 20s linear infinite; /* 調慢跑馬燈速度 */
-    }
-    @keyframes scroll {
-      0% { transform: translateX(0%); }
-      100% { transform: translateX(-100%); }
+      position: absolute;
+      white-space: nowrap;
+      will-change: transform;
     }
   </style>
 </head>
@@ -74,6 +73,10 @@
     const apiKey    = "IBVQG2VMDEDOG2DN";   // 改成你的 Read API Key，公開頻道可留空
     const fieldNum  = 1;                  // 顯示哪個欄位
     const resultsNum = 6;                 // 顯示最新 6 筆
+    const marqueeSpan = document.getElementById("marqueeText");
+    const marqueeWidth = document.querySelector('.marquee').offsetWidth;
+
+    let posX = marqueeWidth;
 
     async function fetchData() {
       try {
@@ -83,22 +86,32 @@
         const feeds = data.feeds;
 
         if (!feeds || feeds.length === 0) {
-          document.getElementById("marqueeText").textContent = "目前沒有資料";
+          marqueeSpan.textContent = "目前沒有資料";
           return;
         }
 
-        // 只取文字欄位，不顯示時間
+        // 更新文字內容，立即刷新
         const messages = feeds.map(feed => feed[`field${fieldNum}`] || "沒有資料");
-
-        document.getElementById("marqueeText").textContent = messages.join(" ｜ ");
+        marqueeSpan.textContent = messages.join(" ｜ ");
+        posX = marqueeWidth; // 文字重新從右側開始
       } catch (error) {
-        document.getElementById("marqueeText").textContent = "讀取失敗";
+        marqueeSpan.textContent = "讀取失敗";
         console.error(error);
       }
     }
 
-    fetchData();                    // 先讀一次
-    setInterval(fetchData, 60*1000); // 每分鐘更新一次
+    function animateMarquee() {
+      posX -= 2; // 調整速度，數字越大越快
+      if (posX < -marqueeSpan.offsetWidth) {
+        posX = marqueeWidth;
+      }
+      marqueeSpan.style.transform = `translateX(${posX}px)`;
+      requestAnimationFrame(animateMarquee);
+    }
+
+    fetchData();                    // 初次抓取
+    setInterval(fetchData, 60000);  // 每分鐘更新一次
+    animateMarquee();               // 啟動動畫
   </script>
 </body>
 </html>
