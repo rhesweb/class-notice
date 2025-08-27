@@ -98,7 +98,7 @@
 
         // 過濾：只保留 10 小時內的資料
         const recentFeeds = feeds.filter(feed => {
-          const feedTime = new Date(feed.created_at + " UTC"); // 明確解析為 UTC
+          const feedTime = new Date(feed.created_at); // UTC 時間會自動轉成本地時間
           const hoursDiff = (now - feedTime) / (1000 * 60 * 60); // 毫秒轉小時
           return hoursDiff <= 10;
         });
