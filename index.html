@@ -1,141 +1,94 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <title>課照班回家提醒通知</title>
-  <style>
-    body {
-      font-family: "Microsoft JhengHei", sans-serif;
-      background: #f9f5ec;
-      text-align: center;
-      padding: 40px;
-    }
-    h1 {
-      color: #2c3e50;
-      margin-bottom: 30px;
-      font-size: 36px;
-      text-shadow: 2px 2px #fff;
-    }
-    .board {
-      width: 80%;
-      margin: 0 auto;
-      background: #fff8dc;
-      border: 10px solid #d35400;
-      border-radius: 20px;
-      box-shadow: 6px 6px 15px rgba(0,0,0,0.3);
-      padding: 20px;
-      position: relative;
-    }
-    .board::before {
-      content: "📌 公告欄";
-      position: absolute;
-      top: -35px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #e67e22;
-      color: white;
-      padding: 8px 20px;
-      border-radius: 10px;
-      font-weight: bold;
-      font-size: 20px;
-      box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-    }
-    .marquee {
-      overflow: hidden;
-      white-space: nowrap;
-      background: #fef9e7;
-      border: 3px dashed #d35400;
-      border-radius: 15px;
-      padding: 15px;
-      font-size: 22px;
-      font-weight: bold;
-      color: #1a5276;
-      margin-top: 20px;
-      position: relative;
-      height: 40px;
-    }
-    .marquee span {
-      display: inline-block;
-      position: absolute;
-      white-space: nowrap;
-      will-change: transform;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>課照班回家提醒通知</title>
+<style>
+body { font-family:"Microsoft JhengHei",sans-serif; background:#f9f5ec; text-align:center; padding:40px; }
+h1 { color:#2c3e50; margin-bottom:30px; font-size:36px; text-shadow:2px 2px #fff; }
+.board { width:80%; margin:0 auto; background:#fff8dc; border:10px solid #d35400; border-radius:20px; box-shadow:6px 6px 15px rgba(0,0,0,0.3); padding:20px; position:relative; }
+.board::before { content:"📌 公告欄"; position:absolute; top:-35px; left:50%; transform:translateX(-50%); background:#e67e22; color:white; padding:8px 20px; border-radius:10px; font-weight:bold; font-size:20px; box-shadow:2px 2px 5px rgba(0,0,0,0.2); }
+.marquee { overflow:hidden; white-space:nowrap; background:#fef9e7; border:3px dashed #d35400; border-radius:15px; padding:15px; font-size:22px; font-weight:bold; color:#1a5276; margin-top:20px; position:relative; height:40px; }
+.marquee span { display:inline-block; position:absolute; white-space:nowrap; will-change:transform; }
+</style>
 </head>
 <body>
-  <h1>📢 課照班回家提醒通知</h1>
-  <div class="board">
-    <div class="marquee"><span id="marqueeText">載入中...</span></div>
-  </div>
+<h1>📢 課照班回家提醒通知</h1>
+<div class="board">
+  <div class="marquee"><span id="marqueeText">載入中...</span></div>
+</div>
 
-  <!-- 新訊息提示音 -->
-  <audio id="notifSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+<audio id="notifSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
 
-  <script>
-    const channelID = "3049907";   // 改成你的 ThingSpeak Channel ID
-    const apiKey    = "IBVQG2VMDEDOG2DN";   // 改成你的 Read API Key，公開頻道可留空
-    const fieldNum  = 1;                  // 顯示哪個欄位
-    const resultsNum = 6;                 // 顯示最新 6 筆
-    const marqueeSpan = document.getElementById("marqueeText");
-    const marqueeWidth = document.querySelector('.marquee').offsetWidth;
+<script>
+const channelID = "3049907"; // 改成你的 ChannelID
+const apiKey = "
+IBVQG2VMDEDOG2DN";    // 改成你的 Read API Key
+const fieldNum = 1;
+const resultsNum = 6;
+const marqueeSpan = document.getElementById("marqueeText");
+const marqueeWidth = document.querySelector('.marquee').offsetWidth;
 
-    let posX = marqueeWidth;
-    let lastMessages = "";
+let posX = marqueeWidth;
+let lastMessages = "";
 
-    async function fetchData() {
-      try {
-        const url = `https://api.thingspeak.com/channels/${channelID}/fields/${fieldNum}.json?api_key=${apiKey}&results=${resultsNum}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        const feeds = data.feeds;
+function getLocalDateString(utcDateStr) {
+  const date = new Date(utcDateStr);        // UTC 解析
+  const localDate = new Date(date.getTime() + 8*60*60*1000); // 台灣時間 UTC+8
+  return localDate.toISOString().split("T")[0]; // YYYY-MM-DD
+}
 
-        if (!feeds || feeds.length === 0) {
-          marqueeSpan.textContent = "目前沒有資料";
-          return;
-        }
+async function fetchData() {
+  try {
+    const url = `https://api.thingspeak.com/channels/${channelID}/fields/${fieldNum}.json?api_key=${apiKey}&results=${resultsNum}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    const feeds = data.feeds;
 
-        const now = new Date();
-
-        // 過濾：只保留 10 小時內的資料
-        const recentFeeds = feeds.filter(feed => {
-          const feedTime = new Date(feed.created_at); // UTC 時間會自動轉成本地時間
-          const hoursDiff = (now - feedTime) / (1000 * 60 * 60); // 毫秒轉小時
-          return hoursDiff <= 10;
-        });
-
-        if (recentFeeds.length === 0) {
-          marqueeSpan.textContent = "目前沒有資料";
-          return;
-        }
-
-        const messages = recentFeeds.map(feed => feed[`field${fieldNum}`] || "沒有資料").join(" ｜ ");
-
-        // 播放提示音（如果有新資料）
-        if (messages !== lastMessages) {
-          document.getElementById("notifSound").play();
-          lastMessages = messages;
-        }
-
-        marqueeSpan.textContent = messages;
-        posX = marqueeWidth; // 文字重新從右側開始
-      } catch (error) {
-        marqueeSpan.textContent = "讀取失敗";
-        console.error(error);
-      }
+    if (!feeds || feeds.length === 0) {
+      marqueeSpan.textContent = "目前沒有資料";
+      return;
     }
 
-    function animateMarquee() {
-      posX -= 2; // 調整滾動速度
-      if (posX < -marqueeSpan.offsetWidth) {
-        posX = marqueeWidth;
-      }
-      marqueeSpan.style.transform = `translateX(${posX}px)`;
-      requestAnimationFrame(animateMarquee);
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+
+    const recentFeeds = feeds.filter(feed => {
+      const feedDateStr = getLocalDateString(feed.created_at);
+      return feedDateStr === todayStr;
+    });
+
+    if (recentFeeds.length === 0) {
+      marqueeSpan.textContent = "目前沒有資料";
+      return;
     }
 
-    fetchData();                    // 初次抓取
-    setInterval(fetchData, 60000);  // 每分鐘更新一次
-    animateMarquee();               // 啟動跑馬燈動畫
-  </script>
+    const messages = recentFeeds.map(feed => feed[`field${fieldNum}`] || "沒有資料").join(" ｜ ");
+
+    if (messages !== lastMessages) {
+      document.getElementById("notifSound").play();
+      lastMessages = messages;
+    }
+
+    marqueeSpan.textContent = messages;
+    posX = marqueeWidth;
+
+  } catch (error) {
+    marqueeSpan.textContent = "讀取失敗";
+    console.error(error);
+  }
+}
+
+function animateMarquee() {
+  posX -= 2;
+  if (posX < -marqueeSpan.offsetWidth) posX = marqueeWidth;
+  marqueeSpan.style.transform = `translateX(${posX}px)`;
+  requestAnimationFrame(animateMarquee);
+}
+
+fetchData();
+setInterval(fetchData, 60000);
+animateMarquee();
+</script>
 </body>
 </html>
