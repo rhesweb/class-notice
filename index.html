@@ -72,8 +72,8 @@
   <audio id="notifSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
 
   <script>
-    const channelID = "你的ChannelID";   // 改成你的 ThingSpeak Channel ID
-    const apiKey    = "你的ReadAPIKey";   // 改成你的 Read API Key，公開頻道可留空
+    const channelID = "3049907";   // 改成你的 ThingSpeak Channel ID
+    const apiKey    = "IBVQG2VMDEDOG2DN";   // 改成你的 Read API Key，公開頻道可留空
     const fieldNum  = 1;                  // 顯示哪個欄位
     const resultsNum = 6;                 // 顯示最新 6 筆
     const marqueeSpan = document.getElementById("marqueeText");
@@ -94,12 +94,11 @@
           return;
         }
 
-        // 取得現在時間
         const now = new Date();
 
         // 過濾：只保留 10 小時內的資料
         const recentFeeds = feeds.filter(feed => {
-          const feedTime = new Date(feed.created_at);
+          const feedTime = new Date(feed.created_at + " UTC"); // 明確解析為 UTC
           const hoursDiff = (now - feedTime) / (1000 * 60 * 60); // 毫秒轉小時
           return hoursDiff <= 10;
         });
@@ -111,7 +110,7 @@
 
         const messages = recentFeeds.map(feed => feed[`field${fieldNum}`] || "沒有資料").join(" ｜ ");
 
-        // 如果新資料跟上次不同，就播放音效
+        // 播放提示音（如果有新資料）
         if (messages !== lastMessages) {
           document.getElementById("notifSound").play();
           lastMessages = messages;
