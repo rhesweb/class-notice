@@ -94,7 +94,22 @@
           return;
         }
 
-        const messages = feeds.map(feed => feed[`field${fieldNum}`] || "沒有資料").join(" ｜ ");
+        // 取得現在時間
+        const now = new Date();
+
+        // 過濾：只保留 10 小時內的資料
+        const recentFeeds = feeds.filter(feed => {
+          const feedTime = new Date(feed.created_at);
+          const hoursDiff = (now - feedTime) / (1000 * 60 * 60); // 毫秒轉小時
+          return hoursDiff <= 10;
+        });
+
+        if (recentFeeds.length === 0) {
+          marqueeSpan.textContent = "目前沒有資料";
+          return;
+        }
+
+        const messages = recentFeeds.map(feed => feed[`field${fieldNum}`] || "沒有資料").join(" ｜ ");
 
         // 如果新資料跟上次不同，就播放音效
         if (messages !== lastMessages) {
