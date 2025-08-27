@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>課照班回家提醒通知</title>
+  <style>
+    body {
+      font-family: "Microsoft JhengHei", sans-serif;
+      background: #f9f5ec;
+      text-align: center;
+      padding: 40px;
+    }
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 30px;
+      font-size: 36px;
+      text-shadow: 2px 2px #fff;
+    }
+    .board {
+      width: 80%;
+      margin: 0 auto;
+      background: #fff8dc;
+      border: 10px solid #d35400;
+      border-radius: 20px;
+      box-shadow: 6px 6px 15px rgba(0,0,0,0.3);
+      padding: 20px;
+      position: relative;
+    }
+    .board::before {
+      content: "📌 公告欄";
+      position: absolute;
+      top: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #e67e22;
+      color: white;
+      padding: 8px 20px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 20px;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    }
+    .marquee {
+      overflow: hidden;
+      white-space: nowrap;
+      background: #fef9e7;
+      border: 3px dashed #d35400;
+      border-radius: 15px;
+      padding: 15px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #1a5276;
+      margin-top: 20px;
+    }
+    .marquee span {
+      display: inline-block;
+      padding-left: 100%;
+      animation: scroll 20s linear infinite; /* 調慢跑馬燈速度 */
+    }
+    @keyframes scroll {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-100%); }
+    }
+  </style>
+</head>
+<body>
+  <h1>📢 課照班回家提醒通知</h1>
+  <div class="board">
+    <div class="marquee"><span id="marqueeText">載入中...</span></div>
+  </div>
+
+  <script>
+    const channelID = "3049907";   // 改成你的 ThingSpeak Channel ID
+    const apiKey    = "IBVQG2VMDEDOG2DN";   // 改成你的 Read API Key，公開頻道可留空
+    const fieldNum  = 1;                  // 顯示哪個欄位
+    const resultsNum = 6;                 // 顯示最新 6 筆
+
+    async function fetchData() {
+      try {
+        const url = `https://api.thingspeak.com/channels/${channelID}/fields/${fieldNum}.json?api_key=${apiKey}&results=${resultsNum}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        const feeds = data.feeds;
+
+        if (!feeds || feeds.length === 0) {
+          document.getElementById("marqueeText").textContent = "目前沒有資料";
+          return;
+        }
+
+        // 只取文字欄位，不顯示時間
+        const messages = feeds.map(feed => feed[`field${fieldNum}`] || "沒有資料");
+
+        document.getElementById("marqueeText").textContent = messages.join(" ｜ ");
+      } catch (error) {
+        document.getElementById("marqueeText").textContent = "讀取失敗";
+        console.error(error);
+      }
+    }
+
+    fetchData();                    // 先讀一次
+    setInterval(fetchData, 60*1000); // 每分鐘更新一次
+  </script>
+</body>
+</html>
