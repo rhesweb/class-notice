@@ -68,15 +68,19 @@
     <div class="marquee"><span id="marqueeText">載入中...</span></div>
   </div>
 
+  <!-- 新訊息提示音 -->
+  <audio id="notifSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+
   <script>
-    const channelID = "3049907";   // 改成你的 ThingSpeak Channel ID
-    const apiKey    = "IBVQG2VMDEDOG2DN";   // 改成你的 Read API Key，公開頻道可留空
+    const channelID = "你的ChannelID";   // 改成你的 ThingSpeak Channel ID
+    const apiKey    = "你的ReadAPIKey";   // 改成你的 Read API Key，公開頻道可留空
     const fieldNum  = 1;                  // 顯示哪個欄位
     const resultsNum = 6;                 // 顯示最新 6 筆
     const marqueeSpan = document.getElementById("marqueeText");
     const marqueeWidth = document.querySelector('.marquee').offsetWidth;
 
     let posX = marqueeWidth;
+    let lastMessages = "";
 
     async function fetchData() {
       try {
@@ -90,9 +94,15 @@
           return;
         }
 
-        // 更新文字內容，立即刷新
-        const messages = feeds.map(feed => feed[`field${fieldNum}`] || "沒有資料");
-        marqueeSpan.textContent = messages.join(" ｜ ");
+        const messages = feeds.map(feed => feed[`field${fieldNum}`] || "沒有資料").join(" ｜ ");
+
+        // 如果新資料跟上次不同，就播放音效
+        if (messages !== lastMessages) {
+          document.getElementById("notifSound").play();
+          lastMessages = messages;
+        }
+
+        marqueeSpan.textContent = messages;
         posX = marqueeWidth; // 文字重新從右側開始
       } catch (error) {
         marqueeSpan.textContent = "讀取失敗";
@@ -101,7 +111,7 @@
     }
 
     function animateMarquee() {
-      posX -= 2; // 調整速度，數字越大越快
+      posX -= 2; // 調整滾動速度
       if (posX < -marqueeSpan.offsetWidth) {
         posX = marqueeWidth;
       }
@@ -111,7 +121,7 @@
 
     fetchData();                    // 初次抓取
     setInterval(fetchData, 60000);  // 每分鐘更新一次
-    animateMarquee();               // 啟動動畫
+    animateMarquee();               // 啟動跑馬燈動畫
   </script>
 </body>
 </html>
