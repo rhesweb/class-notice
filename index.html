@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>課照班回家提醒通知 - 測試跑馬燈</title>
+  <title>課照班回家提醒通知</title>
   <style>
     body {
       font-family: "Microsoft JhengHei", sans-serif;
@@ -43,8 +43,8 @@
     .marquee {
       overflow: hidden;
       white-space: nowrap;
-      background: #ffffff;        /* 白底 */
-      border: 3px solid #ff0000;  /* 紅色實線框 */
+      background: #ffffff;
+      border: 3px solid #ff0000;
       border-radius: 15px;
       padding: 15px;
       font-size: 22px;
@@ -65,16 +65,58 @@
 <body>
   <h1>📢 課照班回家提醒通知</h1>
   <div class="board">
-    <div class="marquee"><span id="marqueeText">測試跑馬燈訊息：歡迎使用 GitHub Pages！</span></div>
+    <div class="marquee"><span id="marqueeText">載入中...</span></div>
   </div>
 
   <script>
+    const channelID = " 3049907";   // 替換成你的 ThingSpeak Channel ID
+    const apiKey = "IBVQG2VMDEDOG2DN";          // 替換成你的 Read API Key，公開頻道可留空
+    const fieldNum = 1;                   // 顯示哪個欄位
+    const resultsNum = 100;               // 抓比較多筆，方便篩選今天資料
     const marqueeSpan = document.getElementById("marqueeText");
     const marqueeWidth = document.querySelector('.marquee').offsetWidth;
     let posX = marqueeWidth;
 
+    function isToday(dateStr) {
+      const date = new Date(dateStr);
+      const today = new Date();
+      return date.getFullYear() === today.getFullYear() &&
+             date.getMonth() === today.getMonth() &&
+             date.getDate() === today.getDate();
+    }
+
+    async function fetchData() {
+      try {
+        const url = `https://api.thingspeak.com/channels/${channelID}/fields/${fieldNum}.json?api_key=${apiKey}&results=${resultsNum}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        const feeds = data.feeds;
+
+        if (!feeds || feeds.length === 0) {
+          marqueeSpan.textContent = "目前沒有資料";
+          return;
+        }
+
+        // 篩選今天資料
+        const todayFeeds = feeds.filter(feed => feed.created_at && isToday(feed.created_at));
+        if (todayFeeds.length === 0) {
+          marqueeSpan.textContent = "今天沒有資料";
+          return;
+        }
+
+        // 取最後 6 筆
+        const lastFeeds = todayFeeds.slice(-6);
+        const messages = lastFeeds.map(feed => feed[`field${fieldNum}`] || "沒有資料");
+        marqueeSpan.textContent = messages.join(" ｜ ");
+        posX = marqueeWidth; // 文字重新從右側開始
+      } catch (error) {
+        marqueeSpan.textContent = "讀取失敗";
+        console.error(error);
+      }
+    }
+
     function animateMarquee() {
-      posX -= 2; // 調整速度
+      posX -= 2;
       if (posX < -marqueeSpan.offsetWidth) {
         posX = marqueeWidth;
       }
@@ -82,7 +124,9 @@
       requestAnimationFrame(animateMarquee);
     }
 
-    animateMarquee();
+    fetchData();                    // 初次抓取
+    setInterval(fetchData, 60000);  // 每分鐘更新一次
+    animateMarquee();               // 啟動動畫
   </script>
 </body>
 </html>
